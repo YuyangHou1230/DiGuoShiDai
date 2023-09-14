@@ -47,51 +47,71 @@ void AI_MY::processData()
 
     static int raoL = 0;
     static int raoU = 0;
+    static list<pair<double ,double>> raoList;
     if(AIGame.human[0].NowState == HUMAN_STATE_STOP){ // 遇到障碍物，绕行
         // 判断障碍方向
         if( (AIGame.human[0].L - ListL[stepi]) > 0 && ((AIGame.human[0].U - ListU[stepi]) == 0) ){ // 左
-            HumanMove(AIGame.human[0].SN, ListL[stepi], ListU[stepi] + BLOCKSIDELENGTH);
+            raoList.clear();
+            raoList.push_back(pair<double, double>(AIGame.human[0].L+ BLOCKSIDELENGTH*2, AIGame.human[0].U + BLOCKSIDELENGTH));
+            raoList.push_back(pair<double, double>(AIGame.human[0].L+ BLOCKSIDELENGTH*2, AIGame.human[0].U));
+            HumanMove(AIGame.human[0].SN, AIGame.human[0].L, AIGame.human[0].U + BLOCKSIDELENGTH);
         }
         if( (AIGame.human[0].L - ListL[stepi]) == 0 && ((AIGame.human[0].U - ListU[stepi]) < 0) ){ // 上
+            raoList.clear();
+            raoList.push_back(pair<double, double>(AIGame.human[0].L+ BLOCKSIDELENGTH*2, AIGame.human[0].U + BLOCKSIDELENGTH));
+            raoList.push_back(pair<double, double>(AIGame.human[0].L+ BLOCKSIDELENGTH*2, AIGame.human[0].U));
             HumanMove(AIGame.human[0].SN, ListL[stepi], ListU[stepi] + BLOCKSIDELENGTH);
         }
         if( (AIGame.human[0].L - ListL[stepi]) < 0 && ((AIGame.human[0].U - ListU[stepi]) == 0) ){ // 右
-            HumanMove(AIGame.human[0].SN, ListL[stepi], ListU[stepi] + BLOCKSIDELENGTH);
+            raoList.clear();
+            raoList.push_back(pair<double, double>(AIGame.human[0].L+ BLOCKSIDELENGTH*2, AIGame.human[0].U - BLOCKSIDELENGTH));
+            raoList.push_back(pair<double, double>(AIGame.human[0].L+ BLOCKSIDELENGTH*2, AIGame.human[0].U));
+            HumanMove(AIGame.human[0].SN, AIGame.human[0].L, AIGame.human[0].U + BLOCKSIDELENGTH);
         }
         if( (AIGame.human[0].L - ListL[stepi]) == 0 && ((AIGame.human[0].U - ListU[stepi]) > 0) ){ // 下
+            raoList.clear();
+            raoList.push_back(pair<double, double>(AIGame.human[0].L+ BLOCKSIDELENGTH*2, AIGame.human[0].U + BLOCKSIDELENGTH));
+            raoList.push_back(pair<double, double>(AIGame.human[0].L+ BLOCKSIDELENGTH*2, AIGame.human[0].U));
             HumanMove(AIGame.human[0].SN, ListL[stepi], ListU[stepi] + BLOCKSIDELENGTH);
         }
     }
     else{ // 普通移动
-        if(stepi == 0){
-            int dL[stepn] = {-b, 0, (2*a*circleNum+b), 0, -(2*a*circleNum+b)};
-            int dU[stepn] = {0, a*circleNum+b, 0, -(2*a*circleNum+b), 0, };
-            double L1=L,U1=U;
-            for(int i=0;i<stepn;i++){
-                L1 += dL[i] * BLOCKSIDELENGTH;
-                ListL[i] = L1;
-                U1 += dU[i] * BLOCKSIDELENGTH;
-                ListU[i] = U1;
-            }
-            HumanMove(AIGame.human[0].SN, ListL[stepi], ListU[stepi]);
-            stepi++;
-        }else{
-            double targetL;
-            double targetU;
-            // 判断是否到达目标点
-            double fL = fabs(AIGame.human[0].L - ListL[stepi-1]);
-            double fU = fabs(AIGame.human[0].U - ListU[stepi-1]);
-            if((fL < 1.1  && fU < 1.1) ){ //到达目标点则发送新的移动指令
-
+        if(!raoList.empty()){
+            HumanMove(AIGame.human[0].SN, raoList.front().first, raoList.front().second);
+            raoList.pop_front();
+        }
+        else{
+            if(stepi == 0){
+                int dL[stepn] = {-b, 0, (2*a*circleNum+b), 0, -(2*a*circleNum+b)};
+                int dU[stepn] = {0, a*circleNum+b, 0, -(2*a*circleNum+b), 0, };
+                double L1=L,U1=U;
+                for(int i=0;i<stepn;i++){
+                    L1 += dL[i] * BLOCKSIDELENGTH;
+                    ListL[i] = L1;
+                    U1 += dU[i] * BLOCKSIDELENGTH;
+                    ListU[i] = U1;
+                }
                 HumanMove(AIGame.human[0].SN, ListL[stepi], ListU[stepi]);
                 stepi++;
+            }else{
+                double targetL;
+                double targetU;
+                // 判断是否到达目标点
+                double fL = fabs(AIGame.human[0].L - ListL[stepi-1]);
+                double fU = fabs(AIGame.human[0].U - ListU[stepi-1]);
+                if((fL < 1.1  && fU < 1.1) ){ //到达目标点则发送新的移动指令
 
-                if(stepi == stepn){
-                    stepi = 0;
-                    circleNum ++; // 圈数增加
+                    HumanMove(AIGame.human[0].SN, ListL[stepi], ListU[stepi]);
+                    stepi++;
+
+                    if(stepi == stepn){
+                        stepi = 0;
+                        circleNum ++; // 圈数增加
+                    }
                 }
             }
         }
+
 
     }
 
@@ -107,7 +127,7 @@ void AI_MY::processData()
 
     // 盖住房
 
-    // 砍树
+
 
     // 采集浆果
     static int Human2Action = 0;
@@ -119,6 +139,23 @@ void AI_MY::processData()
         }
     }
 
+    // 砍树
+    static int Human3Action = 0;
+    if(Human3Action == 0){
+        int bushSN = findResSN(AIGame.human[2], RESOURCE_TREE);
+        if(bushSN != 0){
+            HumanAction(AIGame.human[2].SN, bushSN);
+            Human3Action = 1;
+        }
+    }
+
+    // 生产农民
+    if(AIGame.human_n < AIGame.Human_MaxNum){
+        if(AIGame.building[0].Project == BUILDING_FREE){
+            BuildingAction(AIGame.building[0].SN, BUILDING_CENTER_UPGRADE);
+        }
+
+    }
 
 
     ProcessDataWork = 0;
