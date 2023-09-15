@@ -13,7 +13,8 @@ public:
     virtual void processData();
 
     // 查找距离某个村民最近的资源
-    int findResSN(tagHuman human, int resouce);
+    int findResSN(tagHuman human, int resouce, int &index);
+    bool hasBuilding(int type);
 };
 
 #endif // AI_MY_H

@@ -82,3 +82,6 @@ FORMS += \
     AboutDialog.ui \
     Option.ui
 
+DISTFILES += \
+    res.rcc
+
