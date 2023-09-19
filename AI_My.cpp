@@ -9,7 +9,99 @@ AI_MY::AI_MY()
 void AI_MY::processData()
 {
     ProcessDataWork = 1;
+    ///构建地图
+    static mapInfo myMap[72][72];
+//    static QList<tagHuman*> humanList;
+    //取资源
+    for(int a=0;a < AIGame.resource_n;a++){
+        myMap[AIGame.resource[a].BlockL][AIGame.resource[a].BlockU] = AIGame.resource[a];
+        myMap[AIGame.resource[a].BlockL][AIGame.resource[a].BlockU].IsEmpty = false;
+    }
 
+    //取建筑
+    for (int b=0;b < AIGame.building_n ;b++) {
+        mapInfo bulidInfo = AIGame.building[b];
+        int  foundTmp = bulidInfo.Foundation;
+        //所占格都是Foundation+2
+        for (int bi=0;bi < foundTmp+2;bi++) {
+            for (int bj=0;bj < foundTmp+2;bj++) {
+                myMap[AIGame.building[b].BlockL+bi][AIGame.building[b].BlockU+bj] = AIGame.building[b];
+                myMap[AIGame.building[b].BlockL+bi][AIGame.building[b].BlockU+bj].IsEmpty = false;
+            }
+        }
+    }
+    //取人
+    for (int c=0;c < AIGame.human_n;c++) {
+        myMap[AIGame.human[c].BlockL][AIGame.human[c].BlockU] = AIGame.human[c];
+//        humanList.append(&AIGame.human[c]);
+        myMap[AIGame.human[c].BlockL][AIGame.human[c].BlockU].IsEmpty = false;
+        myMap[AIGame.human[c].BlockL][AIGame.human[c].BlockU].IsArrived = true;
+    }
+
+    ///第一阶段
+//    GameFirstStep()
+//    mapInfo humanPathMap[5][5];
+
+    static tagHuman firstHuman = AIGame.human[0];
+    double firHumanX = firstHuman.L;
+    double firHumanY = firstHuman.U;
+    int blockHumanX = AIGame.human[0].BlockL;
+    int blockHumanY = AIGame.human[0].BlockU;
+    static QPointF humanGoTo;
+//    HumanMove(firstHuman.SN,-15*BLOCKSIDELENGTH,0*BLOCKSIDELENGTH);
+//    return;
+    if(AIGame.GameFrame == 0){
+        humanGoTo = QPointF(-3*BLOCKSIDELENGTH,0*BLOCKSIDELENGTH) + QPointF(AIGame.human[0].L, AIGame.human[0].U);
+        HumanMove(firstHuman.SN,humanGoTo.rx(),humanGoTo.ry());
+        ProcessDataWork = 0;
+        return ;
+    }
+
+    if(AIGame.human[0].NowState == HUMAN_STATE_STOP){ // 遇到障碍物
+        //取视野地图5x5
+        for (int hi=-2;hi < 3;hi+=4) {
+            for (int hj=-2;hj < 3;hj+=4) {
+                bool empty = myMap[blockHumanX+hi][blockHumanY+hj].IsEmpty;
+                bool arrived = myMap[blockHumanX+hi][blockHumanY+hj].IsArrived;
+                if(!empty||arrived){
+                    //判断即将前进的格子是否为空，并且是否去过
+                    continue;
+                }
+                //记录即将要去的坐标
+                humanGoTo.setX(firHumanX+hi*BLOCKSIDELENGTH);
+                humanGoTo.setY(firHumanY+hj*BLOCKSIDELENGTH);
+                HumanMove(firstHuman.SN,humanGoTo.x(),humanGoTo.y());
+            }
+        }
+    }else {
+            // 判断是否到达目标点
+            double fL = fabs(firstHuman.L - humanGoTo.x());
+            double fU = fabs(firstHuman.U - humanGoTo.y());
+            if((fL < 1.1  && fU < 1.1)){ //到达目标点则发送新的移动指令
+                //取视野地图5x5
+                for (int hi=-2;hi < 3;hi+=4) {
+                    for (int hj=-2;hj < 3;hj+=4) {
+                        bool empty = myMap[blockHumanX+hi][blockHumanY+hj].IsEmpty;
+                        bool arrived = myMap[blockHumanX+hi][blockHumanY+hj].IsArrived;
+                        if(!empty||arrived){
+                            //判断即将前进的格子是否为空，并且是否去过
+                            continue;
+                        }
+                        //记录即将要去的坐标
+                        humanGoTo.setX(firHumanX+hi*BLOCKSIDELENGTH);
+                        humanGoTo.setY(firHumanY+hj*BLOCKSIDELENGTH);
+                        HumanMove(firstHuman.SN,humanGoTo.x(),humanGoTo.y());
+                    }
+                }
+            }
+    }
+
+
+    ProcessDataWork = 0;
+    return;
+
+
+    //////////////////////////////////////////////
     if(AIGame.GameFrame == 0) {
         emit cheatRes();
         emit cheatRes();
@@ -17,7 +109,6 @@ void AI_MY::processData()
         // 也可以再初始化时更改农民上限或进入下一时代
 //        emit cheatFarmerLimit();
 //        emit cheatAge();
-
         // 打印市镇中心左边
         qDebug() << "市镇中心：" << AIGame.building[0].BlockL << AIGame.building[0].BlockU;
 
@@ -237,6 +328,13 @@ void AI_MY::processData()
 
     ProcessDataWork = 0;
 }
+
+void AI_MY::GameFirstStep(mapInfo *myMap,int m,int n)
+{
+
+}
+
+
 
 int AI_MY::findResSN(tagHuman human, int resouce, int &index)
 {
