@@ -5,11 +5,209 @@
 #include <Windows.h>
 #include <iostream>
 
-AI::AI(QObject *parent)
-    : QObject(parent)
+namespace My_Struct
 {
+struct mapInfo{
+    bool IsEmpty = true;
+    bool IsArrived = false;
+    int Type;
+    int SN;
+    //human
+    int NowState;
+    //buliding
+    int Foundation;
+    int Project;//当前建筑忙碌于
+    mapInfo(){
+
+    }
+    mapInfo(tagResource resource){
+        Type = resource.Type;
+        SN = resource.SN;
+    }
+
+    mapInfo(tagHuman resource){
+        NowState = resource.NowState;
+        SN = resource.SN;
+    }
+
+    mapInfo(tagBuilding resource){
+        Type = resource.Type;
+        Foundation = resource.Foundation;
+        Project = resource.Project;
+        SN = resource.SN;
+    }
+};
 }
 
+using namespace My_Struct;
+namespace My_Function {
+int BuildingAction(int SN, int Action)
+{
+    tagAction BuildAction;
+    BuildAction.A = 0;
+
+    // SN判断
+    bool judgeBuildingSN = false;
+    for(int i = 0; i < AIGame.building_n; i++)
+    {
+        if(AIGame.building[i].SN == SN)
+        {
+            judgeBuildingSN = true;
+            break;
+        }
+    }
+    if(judgeBuildingSN == false) return ACTION_INVALID_SN;
+    BuildAction.SN = SN;
+
+    // Action判断
+    if(Action != 1 && Action != 2 && Action != 3 && Action != 4 && Action != 5 && Action != 6 && Action != 12) return ACTION_INVALID_ACTION;
+    BuildAction.Action = Action;
+
+    g_AiAction[SN] = BuildAction;
+    return ACTION_SUCCESS;
+}
+
+int HumanMove(int SN, int L0, int U0)
+{
+    tagAction MoveAction;
+    MoveAction.A = 1;
+
+    // SN判断
+    bool judgeHumanSN = false;
+    for(int i = 0; i < AIGame.human_n; i++)
+    {
+        if(AIGame.human[i].SN == SN)
+        {
+            judgeHumanSN = true;
+            break;
+        }
+    }
+    if(judgeHumanSN == false) return ACTION_INVALID_SN;
+    MoveAction.SN = SN;
+
+    // L0判断
+    if(L0 > 2575 || L0 < 0) return ACTION_INVALID_LOCATION;
+    MoveAction.L0 = L0;
+
+    // U0判断
+    if(U0 > 2575 || U0 < 0) return ACTION_INVALID_LOCATION;
+    MoveAction.U0 = U0;
+
+    g_AiAction[SN] = MoveAction;
+    return ACTION_SUCCESS;
+}
+
+int HumanAction(int SN, int obSN)
+{
+    tagAction HumanAction;
+    HumanAction.A = 2;
+
+    // SN判断
+    bool judgeHumanSN = false;
+    for(int i = 0; i < AIGame.human_n; i++)
+    {
+        if(AIGame.human[i].SN == SN)
+        {
+            judgeHumanSN = true;
+            break;
+        }
+    }
+    if(judgeHumanSN == false) return ACTION_INVALID_SN;
+    HumanAction.SN = SN;
+
+    // obSN判断
+    bool judgeOBSN = false;
+    for(int i = 0; i < AIGame.resource_n; i++)
+    {
+        if(AIGame.resource[i].SN == obSN)
+        {
+            judgeOBSN = true;
+            break;
+        }
+    }
+    for(int i = 0; i < AIGame.building_n; i++)
+    {
+        if(AIGame.building[i].SN == obSN)
+        {
+            judgeOBSN = true;
+            break;
+        }
+    }
+    if(judgeOBSN == false) return ACTION_INVALID_OBSN;
+    HumanAction.obSN = obSN;
+
+    g_AiAction[SN] = HumanAction;
+    return ACTION_SUCCESS;
+}
+
+int HumanBuild(int SN, int BuildingNum, int BlockL, int BlockU)
+{
+    tagAction HumanBuild;
+    HumanBuild.A = 3;
+
+    // SN判断
+    bool judgeHumanSN = false;
+    for(int i = 0; i < AIGame.human_n; i++)
+    {
+        if(AIGame.human[i].SN == SN)
+        {
+            judgeHumanSN = true;
+            break;
+        }
+    }
+    if(judgeHumanSN == false) return ACTION_INVALID_SN;
+    HumanBuild.SN = SN;
+
+    // BuildingNum判断
+    bool judgeBuildingNum = false;
+    if(BuildingNum != 0 && BuildingNum != 1 && BuildingNum != 3 && BuildingNum != 4 && BuildingNum != 5 && BuildingNum != 6)
+        return ACTION_INVALID_BUILDINGNUM;
+    HumanBuild.BuildingNum = BuildingNum;
+
+    if(BlockL > 72 || BlockL < 0) return ACTION_INVALID_LOCATION;
+    HumanBuild.BlockL = BlockL;
+    if(BlockU > 72 || BlockU < 0) return ACTION_INVALID_LOCATION;
+    HumanBuild.BlockU = BlockU;
+
+    g_AiAction[SN] = HumanBuild;
+    return ACTION_SUCCESS;
+}
+
+
+int tranBlockL(double L)
+{
+    int BlockL;
+    BlockL = L / 16 / gen5;
+    return BlockL;
+}
+
+int tranBlockU(double U)
+{
+    int BlockU;
+    BlockU = U / 16 / gen5;
+    return BlockU;
+}
+
+double tranL(double BlockL)
+{
+    double L;
+    L= BlockL * 16 * gen5;
+    return L;
+}
+
+double tranU(double BlockU)
+{
+    double U;
+    U= BlockU * 16 * gen5;
+    return U;
+}
+
+// 计算两点间距离的平方（坐标）
+double calDistance(double L0, double U0, double TL0, double TU0)
+{
+    return pow(pow(TL0 - L0, 2) + pow(TU0 - U0, 2), 0.5);
+}
+//有无指定类型建筑
 bool hasBuilding(int type)
 {
     bool has = false;
@@ -23,7 +221,8 @@ bool hasBuilding(int type)
     return has;
 }
 
-QPointF AI::calNextStep(tagHuman human, mapInfo myMap[72][72], bool zhuang)
+//下一步
+QPointF calNextStep(tagHuman human, mapInfo myMap[72][72], bool zhuang)
 {
     // 上下左右四个方向可走
     QPoint origin = QPoint(human.BlockL, human.BlockU);
@@ -167,7 +366,8 @@ QPointF AI::calNextStep(tagHuman human, mapInfo myMap[72][72], bool zhuang)
 //    return re;
 }
 
-int AI::findResSN(tagHuman human, int resouce, int &index)
+//找资源的SN
+int findResSN(tagHuman human, int resouce, int &index)
 {
     int dis = 1e6;
     int targetResSN = 0;
@@ -185,17 +385,40 @@ int AI::findResSN(tagHuman human, int resouce, int &index)
     return targetResSN;
 }
 
+}
+
+using namespace My_Function;
+AI::AI(QObject *parent)
+    : QObject(parent)
+{
+
+}
+
+
+//////**************************************游戏开始***********************************************************
 void AI::processData()
 {
     ProcessDataWork = 1;
     ///构建地图
     static mapInfo myMap[72][72];
     static QMap<int, int> feixuList;
+    static QList<tagHuman*> m_humansList;
+    static QList<int> m_bushList;//SN
+    static QList<int> m_treeList;
+    static QList<int> m_stoneList;
 //    static QList<tagHuman*> humanList;
     //取资源
     for(int a=0;a < AIGame.resource_n;a++){
         myMap[AIGame.resource[a].BlockL][AIGame.resource[a].BlockU] = AIGame.resource[a];
         myMap[AIGame.resource[a].BlockL][AIGame.resource[a].BlockU].IsEmpty = false;
+        switch (AIGame.resource[a].Type) {
+        case RESOURCE_BUSH:m_bushList.append(AIGame.resource[a].SN);break;
+        case RESOURCE_TREE:m_treeList.append(AIGame.resource[a].SN);break;
+        case RESOURCE_STONE:m_stoneList.append(AIGame.resource[a].SN);break;
+        case RESOURCE_GAZELLE:break;
+        case RESOURCE_ELEPHANT:break;
+        case RESOURCE_LION:break;
+        }
     }
 
     //取建筑
@@ -218,32 +441,59 @@ void AI::processData()
     //取人
     for (int c=0;c < AIGame.human_n;c++) {
         myMap[AIGame.human[c].BlockL][AIGame.human[c].BlockU] = AIGame.human[c];
-//        humanList.append(&AIGame.human[c]);
+        m_humansList.append(&AIGame.human[c]);
         myMap[AIGame.human[c].BlockL][AIGame.human[c].BlockU].IsEmpty = false;
-//        myMap[AIGame.human[c].BlockL][AIGame.human[c].BlockU].IsArrived = true;
+        myMap[AIGame.human[c].BlockL][AIGame.human[c].BlockU].IsArrived = true;
     }
 
     if(feixuList.size() == 3){
         qDebug() <<"废墟标记完毕";
     }
 
+    // 生产农民
+    if(AIGame.human_n < AIGame.Human_MaxNum){
+        if(AIGame.building[0].Project == BUILDING_FREE){
+            BuildingAction(AIGame.building[0].SN, BUILDING_CENTER_CREATEFARMER);
+        }
+    }
 
     ///第一阶段
 //    GameFirstStep()
 //    mapInfo humanPathMap[5][5];
-
-    tagHuman firstHuman = AIGame.human[0];
-    int blockHumanX = AIGame.human[0].BlockL;
-    int blockHumanY = AIGame.human[0].BlockU;
+    int blockHumanX = m_humansList[0]->BlockL;
+    int blockHumanY = m_humansList[0]->BlockU;
     static QPointF humanGoTo;
 
     if(AIGame.GameFrame == 0){
-        humanGoTo = QPointF(-3*BLOCKSIDELENGTH,0*BLOCKSIDELENGTH) + QPointF(AIGame.human[0].L, AIGame.human[0].U);
-//        qDebug()<<"humanGoTo ...111111"<<humanGoTo.x();
-//        qDebug()<<"humanGoTo ...111111"<<humanGoTo.y();
-        HumanMove(AIGame.human[0].SN,humanGoTo.rx(),humanGoTo.ry());
+        //前俩个人去寻路
+        humanGoTo = QPointF(-3*BLOCKSIDELENGTH,0*BLOCKSIDELENGTH) + QPointF(m_humansList[0]->L, m_humansList[0]->U);
+        HumanMove(m_humansList[0]->SN,humanGoTo.rx(),humanGoTo.ry());
+//        humanGoTo = QPointF(3*BLOCKSIDELENGTH,0*BLOCKSIDELENGTH) + QPointF(m_humansList[1]->L, m_humansList[1]->U);
+//        HumanMove(m_humansList[1]->SN,humanGoTo.rx(),humanGoTo.ry());
+
+        // 第三个人尝试去(40, 31)的位置建立一个房屋
+        static int StockFrame = 0; // 记录建造房屋时的帧数
+        static int BuildingStockX = 40, BuildingStockY = 31; // 记录准备建造仓库的位置
+        if(AIGame.Wood > BUILDING_HOME && m_humansList[2]->NowState != HUMAN_STATE_BUILDING)
+        {
+            HumanBuild(m_humansList[2]->SN, BUILDING_HOME, BuildingStockX, BuildingStockY);
+            StockFrame = AIGame.GameFrame + 5;
+        }
+        // 如果5帧以后，人还没有进入到工作状态，则换一个位置建造
+        if(StockFrame == AIGame.GameFrame && (m_humansList[2]->NowState == HUMAN_STATE_IDLE || m_humansList[2]->NowState == HUMAN_STATE_STOP))
+        {
+            BuildingStockX ++;
+            BuildingStockY ++;
+            // 在坐标不超过地图的情况下，继续尝试在其他位置建造
+            if(BuildingStockX >= 72 || BuildingStockY >= 72) StockFrame = 0;
+            else {
+                emit AIDebugText("AI获取到建造失败，尝试在(" + QString::number(BuildingStockX) + "," + QString::number(BuildingStockY) + ")处再次建立仓库");
+                StockFrame = AIGame.GameFrame + 5;
+                HumanBuild(m_humansList[2]->SN, BUILDING_HOME, BuildingStockX, BuildingStockY);
+            }
         ProcessDataWork = 0;
         return ;
+        }
     }
 
     const int step = 2;
@@ -258,8 +508,6 @@ void AI::processData()
             qDebug()  << "碰撞" << humanGoTo;
 
             //记录即将要去的坐标
-    //        humanGoTo.setX(firHumanX+newPos.x()*BLOCKSIDELENGTH);
-    //        humanGoTo.setY(firHumanY+newPos.y()*BLOCKSIDELENGTH);
             HumanMove(AIGame.human[0].SN,humanGoTo.x(),humanGoTo.y());
         }
         else{
@@ -289,12 +537,10 @@ void AI::processData()
             //取视野地图5x5
             myMap[blockHumanX][blockHumanY].IsArrived = true;
 
-            humanGoTo = calNextStep(AIGame.human[0],myMap);
+            humanGoTo = calNextStep(AIGame.human[0],myMap,false);
 
             //记录即将要去的坐标
-//            humanGoTo.setX(firHumanX+newPos.x()*BLOCKSIDELENGTH);
-//            humanGoTo.setY(firHumanY+newPos.y()*BLOCKSIDELENGTH);
-            HumanMove(firstHuman.SN,humanGoTo.x(),humanGoTo.y());
+            HumanMove(m_humansList[0]->SN,humanGoTo.x(),humanGoTo.y());
         }
     }
 
@@ -302,11 +548,19 @@ void AI::processData()
     ProcessDataWork = 0;
     return;
 
+    ///第二阶段
+    // 采集浆果 采浆果3个人 暂定为 4 5 6
 
-    // 采集浆果
+    for(int ii=0;ii<3;ii++){//采集最近的3组浆果
+        tagHuman* human = m_humansList[ii];
+        int snH = human->SN;
+        int snA = m_bushList[ii];
+        HumanAction(snH,snA);
+    }
+
     static int Human2Action = 0;
     static int bushIndex = -1;
-    if(Human2Action == 0 || AIGame.human[1].NowState == HUMAN_STATE_IDLE){
+    if(Human2Action == 0){
         int bushSN = findResSN(AIGame.human[1], RESOURCE_BUSH, bushIndex);
         if(bushSN != 0){
             HumanAction(AIGame.human[1].SN, bushSN);
@@ -324,7 +578,6 @@ void AI::processData()
             Human3Action = 1;
         }
     }
-
     // 生产农民
     if(AIGame.human_n < AIGame.Human_MaxNum){
         if(AIGame.building[0].Project == BUILDING_FREE){

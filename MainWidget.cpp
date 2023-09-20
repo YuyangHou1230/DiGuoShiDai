@@ -168,8 +168,8 @@ MainWidget::MainWidget(bool MapJudge, QWidget *parent) :
     //线程
     AIthread = new QThread;
 
-//    worker = new AI;
-    worker = new AI_MY;
+    worker = new AI;
+//    worker = new AI_MY;
     worker->moveToThread(AIthread);
 
     connect(this, &MainWidget::dataReady, worker, &AI::processData);
