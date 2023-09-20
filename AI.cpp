@@ -4,6 +4,18 @@
 #include <Qdebug>
 #include <Windows.h>
 #include <iostream>
+
+struct FoundRoad
+{
+    int SN;
+    int lastIndex;
+    tagHuman *man;
+    QPointF targetPos;
+};
+
+static QMap<int, FoundRoad> xunluMap;
+
+
 struct mapInfo{
     bool IsEmpty = true;
     bool IsArrived = false;
@@ -38,8 +50,13 @@ struct mapInfo{
 
 //using namespace My_Struct;
 //下一步
-QPointF calNextStep(tagHuman human, mapInfo myMap[72][72], bool zhuang)
+QPointF calNextStep(int Sn, mapInfo myMap[72][72],  bool zhuang, int celue=1 ) // 策略0 转向  策略1 随机
 {
+//    if(!xunluMap.contains(Sn)){
+//        return
+//    }
+    tagHuman human = *xunluMap[Sn].man;
+    FoundRoad f = xunluMap[Sn];
     // 上下左右四个方向可走
     QPoint origin = QPoint(human.BlockL, human.BlockU);
     QPoint leftPos =  QPoint(-1, 0);
@@ -50,7 +67,7 @@ QPointF calNextStep(tagHuman human, mapInfo myMap[72][72], bool zhuang)
 
     QList<QPoint> kk = QList<QPoint>() << leftPos << topPos << rightPos << bottomPos;
 
-    static int lastIndex = 0;
+    int& lastIndex = xunluMap[Sn].lastIndex;
 
     // 有效的方向
     QList<int> validIndex;
@@ -68,32 +85,37 @@ QPointF calNextStep(tagHuman human, mapInfo myMap[72][72], bool zhuang)
         }
         validIndex << i;
     }
-    if(zhuang){
-        int i = 1;
-        int inds = (lastIndex +i) %4;
-        while(!validIndex.contains(inds)){
-            i++;
-            inds = (lastIndex +i) %4;
+
+    if(celue == 0){
+
+        if(zhuang){
+            int i = 1;
+            int inds = (lastIndex +i) %4;
+            while(!validIndex.contains(inds)){
+                i++;
+                inds = (lastIndex +i) %4;
+            }
+            lastIndex = inds;
+
         }
-        lastIndex = inds;
+        else if(!validIndex.contains(lastIndex)){
+            lastIndex = (lastIndex + 1) %4;
+        }
+
+        QPoint targetPos = kk[lastIndex];
+
+
+        qDebug()   << "target" << targetPos;
+
+        QPointF re = QPointF(human.L + targetPos.x() * BLOCKSIDELENGTH, human.U + targetPos.y() * BLOCKSIDELENGTH);
+        if(re.rx() < 0 || re.ry() < 0){
+             qDebug() << re;
+        }
+
+
+        return re;
 
     }
-    else if(!validIndex.contains(lastIndex)){
-        lastIndex = (lastIndex + 1) %4;
-    }
-
-    QPoint targetPos = kk[lastIndex];
-
-
-    qDebug()   << "target" << targetPos;
-
-    QPointF re = QPointF(human.L + targetPos.x() * BLOCKSIDELENGTH, human.U + targetPos.y() * BLOCKSIDELENGTH);
-    if(re.rx() < 0 || re.ry() < 0){
-         qDebug() << re;
-    }
-
-
-    return re;
 
 
 
@@ -102,25 +124,25 @@ QPointF calNextStep(tagHuman human, mapInfo myMap[72][72], bool zhuang)
 
 
     int range = 1;
-//    while(notArriveIndex.isEmpty()){
-//        realPosIndex.clear();
-//        for(auto i : validIndex){
-//            QPoint p  = kk[i];
-//            int l = human.BlockL + p.x()*range;
-//            int u = human.BlockU +p.y()*range;
-//            if(l<1 || l >=72 || u < 1 || u>=72){
-//                continue;
-//            }
-//            if(myMap[l][u].IsEmpty && !myMap[l][u].IsArrived){
-//                notArriveIndex << i;
-//            }
+    while(notArriveIndex.isEmpty() || range < 5){
+        realPosIndex.clear();
+        for(auto i : validIndex){
+            QPoint p  = kk[i];
+            int l = human.BlockL + p.x()*range;
+            int u = human.BlockU +p.y()*range;
+            if(l<1 || l >=72 || u < 1 || u>=72){
+                continue;
+            }
+            if(myMap[l][u].IsEmpty && !myMap[l][u].IsArrived){
+                notArriveIndex << i;
+            }
 
-//            if(myMap[l][u].IsEmpty || (myMap[l][u].SN == human.SN)){
-//                realPosIndex << i;
-//            }
-//        }
-//        range++;
-//    }
+            if(myMap[l][u].IsEmpty || (myMap[l][u].SN == human.SN)){
+                realPosIndex << i;
+            }
+        }
+        range++;
+    }
 
     for(auto i : validIndex){
         QPoint p  = kk[i];
@@ -168,18 +190,18 @@ QPointF calNextStep(tagHuman human, mapInfo myMap[72][72], bool zhuang)
          qDebug()   << "重复碰撞" ;
      }
 
-//    QPoint targetPos = kk[targetIndex];
-//    lastIndex = targetIndex;
+    QPoint targetPos = kk[targetIndex];
+    lastIndex = targetIndex;
 
-//    qDebug()   << "target" << targetPos;
+    qDebug()   << "target" << targetPos;
 
-//    QPointF re = QPointF(human.L + targetPos.x() * BLOCKSIDELENGTH, human.U + targetPos.y() * BLOCKSIDELENGTH);
-//    if(re.rx() < 0 || re.ry() < 0){
-//         qDebug() << re;
-//    }
+    QPointF re = QPointF(human.L + targetPos.x() * BLOCKSIDELENGTH, human.U + targetPos.y() * BLOCKSIDELENGTH);
+    if(re.rx() < 0 || re.ry() < 0){
+         qDebug() << re;
+    }
 
 
-//    return re;
+    return re;
 }
 
 double calDistance1(double L0, double U0, double TL0, double TU0)
@@ -293,6 +315,7 @@ void AI::processData()
 //    static QList<tagBuilding*> m_gucangList;
 //    static QList<tagBuilding*> m_List;
 
+
     //取资源
     for(int a=0;a < AIGame.resource_n;a++){
         myMap[AIGame.resource[a].BlockL][AIGame.resource[a].BlockU] = AIGame.resource[a];
@@ -355,17 +378,25 @@ void AI::processData()
     ///第一阶段
 //    GameFirstStep()
 //    mapInfo humanPathMap[5][5];
-    int blockHumanX = m_humansList[0]->BlockL;
-    int blockHumanY = m_humansList[0]->BlockU;
+
+
+
+
     static QPointF humanGoTo;
 
     if(AIGame.GameFrame == 0){
         //前俩个人去寻路
         humanGoTo = QPointF(-3*BLOCKSIDELENGTH,0*BLOCKSIDELENGTH) + QPointF(m_humansList[0]->L, m_humansList[0]->U);
         HumanMove(m_humansList[0]->SN,humanGoTo.rx(),humanGoTo.ry());
+        FoundRoad f{m_humansList[0]->SN, 0, m_humansList[0], humanGoTo};
+        xunluMap.insert(m_humansList[0]->SN, f);
         findRoadHumanNum++;
-//        humanGoTo = QPointF(3*BLOCKSIDELENGTH,0*BLOCKSIDELENGTH) + QPointF(m_humansList[1]->L, m_humansList[1]->U);
-//        HumanMove(m_humansList[1]->SN,humanGoTo.rx(),humanGoTo.ry());
+
+        humanGoTo = QPointF(3*BLOCKSIDELENGTH,0*BLOCKSIDELENGTH) + QPointF(m_humansList[1]->L, m_humansList[1]->U);
+        HumanMove(m_humansList[1]->SN,humanGoTo.rx(),humanGoTo.ry());
+        FoundRoad f2{m_humansList[1]->SN, 0, m_humansList[1], humanGoTo};
+        xunluMap.insert(m_humansList[1]->SN, f2);
+        findRoadHumanNum++;
 
         // 第三个人尝试去(40, 31)的位置建立一个房屋
 
@@ -393,49 +424,54 @@ void AI::processData()
         return ;
     }
 
-    const int step = 2;
-    static QMap<int, int> pengzhuangPosMap;
-    if(AIGame.human[0].NowState == HUMAN_STATE_STOP){ // 遇到障碍物
-        //取视野地图5x5
-        myMap[blockHumanX][blockHumanY].IsArrived = true;
-        if(!pengzhuangPosMap.contains(blockHumanX)){
-            pengzhuangPosMap[blockHumanX] = blockHumanY;
-            humanGoTo = calNextStep(AIGame.human[0], myMap, true);
+
+    QMap<int, FoundRoad>::iterator it;
+    for(it = xunluMap.begin(); it != xunluMap.end(); ++it){
+        FoundRoad& p = it.value();
+
+        int blockHumanX = p.man->BlockL;
+        int blockHumanY = p.man->BlockU;
+        if(p.man->NowState== HUMAN_STATE_STOP){// 遇到障碍物
+            //取视野地图5x5
+            myMap[blockHumanX][blockHumanY].IsArrived = true;
+            p.targetPos = calNextStep(p.man->SN, myMap, true);
 
             qDebug()  << "碰撞" << humanGoTo;
 
             //记录即将要去的坐标
-            HumanMove(AIGame.human[0].SN,humanGoTo.x(),humanGoTo.y());
+            HumanMove(p.man->SN,humanGoTo.x(),humanGoTo.y());
         }
-        else{
-
-
-            QPointF temp = calNextStep(AIGame.human[0], myMap, true);
-            auto pos = temp - (humanGoTo - temp); //有可能超出边界
-             qDebug()  << "碰撞多次"  << pos << humanGoTo;
-             humanGoTo = temp;
-
-            HumanMove(AIGame.human[0].SN,humanGoTo.x(),humanGoTo.y()); // 手动移动
-        }
-    }else {
-        // 判断是否到达目标点
-
-        double fL = fabs(AIGame.human[0].L - humanGoTo.x());
-        double fU = fabs(AIGame.human[0].U - humanGoTo.y());
-        //            qDebug()<<"fL ..."<<fL;
-        //            qDebug()<<"fU ..."<<fU;
-        if((fL < 1.1  && fU < 1.1)){ //到达目标点则发送新的移动指令
-
-            pengzhuangPosMap.clear(); //清空碰撞map
+        else if(p.man->NowState >=1 && p.man->NowState <= 10){
             //取视野地图5x5
             myMap[blockHumanX][blockHumanY].IsArrived = true;
+            p.targetPos = calNextStep(p.man->SN, myMap, true);
 
-            humanGoTo = calNextStep(AIGame.human[0],myMap,false);
+            qDebug()  << "碰撞" << humanGoTo;
 
             //记录即将要去的坐标
-            HumanMove(m_humansList[0]->SN,humanGoTo.x(),humanGoTo.y());
+            HumanMove(p.man->SN,p.targetPos.x(),p.targetPos.y());
+        }
+        else{
+            // 判断是否到达目标点
+
+            double fL = fabs(p.man->L - p.targetPos.x());
+            double fU = fabs(p.man->U - p.targetPos.y());
+            //            qDebug()<<"fL ..."<<fL;
+            //            qDebug()<<"fU ..."<<fU;
+            if((fL < 1.1  && fU < 1.1)){ //到达目标点则发送新的移动指令
+
+//                pengzhuangPosMap.clear(); //清空碰撞map
+                //取视野地图5x5
+                myMap[blockHumanX][blockHumanY].IsArrived = true;
+
+                p.targetPos = calNextStep(p.man->SN,myMap,false);
+
+                //记录即将要去的坐标
+                HumanMove(p.man->SN,p.targetPos.x(),p.targetPos.y());
+            }
         }
     }
+
 
     //人物策略
     for (auto i :m_humansList) {
