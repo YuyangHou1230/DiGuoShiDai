@@ -64,8 +64,8 @@ QPointF calHumanEdgePos(tagHuman man, mapInfo myMap[72][72])
     QList<QPoint> validPos;
     for(auto p : edgePos){
         int newL = man.BlockL + p.x();
-        int newU = man.BlockL + p.y();
-        if(newL < 2 || newL > 69 || newU < 2 || newU > 69){
+        int newU = man.BlockU + p.y();
+        if(newL < 2 || newL > 68 || newU < 2 || newU > 68){
             continue;
         }
         if(!myMap[newL][newU].IsEmpty){
@@ -76,8 +76,53 @@ QPointF calHumanEdgePos(tagHuman man, mapInfo myMap[72][72])
         validPos << p;
     }
 
-    int index = QRandomGenerator::global()->bounded(0, validPos.size());
-    QPoint targetPos = validPos[index];
+     QPoint targetPos;
+    if(validPos.size() == 0){
+        QPoint leftPos =  QPoint(-1, 0);
+        QPoint rightPos = QPoint(1, 0);
+        QPoint topPos = QPoint(0, 1);
+        QPoint bottomPos = QPoint(0, -1);
+        QList<QPoint> kk = QList<QPoint>() << leftPos << topPos << rightPos << bottomPos;
+
+        QList<QPoint> pos;
+        QList<QPoint> realPos;
+        for(int i=0; i< 4; i++){
+            int l = man.BlockL + kk[i].x();
+            int u = man.BlockU +kk[i].y();
+
+            pos << QPoint(l, u);
+
+            if(l<1 || l >=72 || u < 1 || u>=72){
+                continue;
+            }
+            if(!myMap[l][u].IsEmpty){
+                continue;
+            }
+            realPos << kk[i];
+        }
+
+        if(realPos.size() == 0 ){
+            qDebug() <<myMap[pos[0].x()][pos[0].y()].IsEmpty<<myMap[pos[0].x()][pos[0].y()].SN;
+            qDebug() <<myMap[pos[1].x()][pos[1].y()].IsEmpty<<myMap[pos[1].x()][pos[1].y()].SN;
+            qDebug() <<myMap[pos[2].x()][pos[2].y()].IsEmpty<<myMap[pos[2].x()][pos[2].y()].SN;
+            qDebug() <<myMap[pos[3].x()][pos[3].y()].IsEmpty<<myMap[pos[3].x()][pos[3].y()].SN;
+            qWarning() << "无路可走" ;
+
+        }
+
+        int index = QRandomGenerator::global()->bounded(0, validPos.size());
+        targetPos = realPos[index];
+
+    }
+    else{
+        int index = QRandomGenerator::global()->bounded(0, validPos.size());
+        targetPos = validPos[index];
+
+    }
+
+
+
+    qDebug() << "Move:" << QPoint(man.BlockL, man.BlockU) + targetPos;
     QPointF re = QPointF(man.L + targetPos.x() * BLOCKSIDELENGTH, man.U + targetPos.y() * BLOCKSIDELENGTH);
     if(re.rx() < 0 || re.ry() < 0){
          qDebug() << re;
@@ -336,7 +381,7 @@ void AI::processData()
 
     ProcessDataWork = 1;
     ///构建地图
-    static mapInfo myMap[72][72];
+     mapInfo myMap[72][72];
     static QMap<int, int> feixuList;
     QList<tagHuman*> m_humansList;
     static int findRoadHumanNum = 0;
@@ -389,7 +434,10 @@ void AI::processData()
     //取人
     for (int c=0;c < AIGame.human_n;c++) {
         myMap[AIGame.human[c].BlockL][AIGame.human[c].BlockU] = AIGame.human[c];
-        m_humansList.append(&AIGame.human[c]);
+        if(!xunluMap.contains(AIGame.human[c].SN)){
+            m_humansList.append(&AIGame.human[c]);
+        }
+
         switch (AIGame.human[c].NowState) {
         case HUMAN_STATE_CUTTING:bushHumanNum++;break;
         case HUMAN_STATE_DIGGING_STONE:stoneHumanNum++;break;
@@ -462,7 +510,7 @@ void AI::processData()
     QMap<int, FoundRoad>::iterator it;
     for(it = xunluMap.begin(); it != xunluMap.end(); ++it){
         auto p = it.value();
-        if(it.value().man->Blood == 0 || p.man->NowState== HUMAN_STATE_STOP){
+        if(it.value().man->Blood == 0 || p.man->NowState== HUMAN_STATE_STOP || (p.man->NowState != HUMAN_STATE_IDLE )){
             wuxiaoSN << it.key();
         }
         int blockHumanX = p.man->BlockL;
@@ -475,7 +523,7 @@ void AI::processData()
             int bushSN = findResSN(*p.man, RESOURCE_TREE,index);
             if(bushSN != 0){
                 HumanAction(p.man->SN, bushSN);
-                xunluMap.remove(p.man->SN);
+//                xunluMap.remove(p.man->SN);
             }
         }
     }
@@ -528,13 +576,13 @@ void AI::processData()
         }
         else if(p.man->NowState >=1 && p.man->NowState <= 10){
             //取视野地图5x5
-            myMap[blockHumanX][blockHumanY].IsArrived = true;
-            p.targetPos = calNextStep(p.man->SN, myMap, true);
+//            myMap[blockHumanX][blockHumanY].IsArrived = true;
+//            p.targetPos = calNextStep(p.man->SN, myMap, true);
 
-            qDebug()  << "碰撞" << humanGoTo;
+//            qDebug()  << "碰撞" << humanGoTo;
 
-            //记录即将要去的坐标
-            HumanMove(p.man->SN,p.targetPos.x(),p.targetPos.y());
+//            //记录即将要去的坐标
+//            HumanMove(p.man->SN,p.targetPos.x(),p.targetPos.y());
         }
         else{
             // 判断是否到达目标点
@@ -606,7 +654,7 @@ void AI::processData()
                 createBuliding(i,BUILDING_HOME,bulidBloL,bulidBloU);
             }
 
-            if()
+//            if()
         }
 
 
