@@ -369,7 +369,7 @@ void AI::processData()
     }
 
     // 生产农民
-    if(AIGame.human_n < AIGame.Human_MaxNum && AIGame.human_n <= 16 && AIGame.Meat > 50){
+    if(AIGame.human_n < AIGame.Human_MaxNum && AIGame.human_n <= 24 && AIGame.Meat >= 50){
         if(AIGame.building[0].Project == BUILDING_FREE){
             BuildingAction(AIGame.building[0].SN, BUILDING_CENTER_CREATEFARMER);
         }
@@ -378,8 +378,6 @@ void AI::processData()
     ///第一阶段
 //    GameFirstStep()
 //    mapInfo humanPathMap[5][5];
-
-
 
 
     static QPointF humanGoTo;
@@ -479,7 +477,8 @@ void AI::processData()
             //跳过前两个寻路的人
             continue;
         }
-        if(i->NowState == HUMAN_STATE_IDLE &&i->Blood >= 0){
+
+        if(i->NowState == HUMAN_STATE_IDLE && i->Blood >= 0){
             //不少于2个派人去寻路
 //            if(findRoadHumanNum <= 2){
 
@@ -505,10 +504,12 @@ void AI::processData()
 
             //建造建筑
             if(m_zhuzhaiList.size() <= 4){
-                int bulidBloL = 30;//AIGame.building[0].BlockL+2;
-                int bulidBloU = 31;//AIGame.building[0].BlockU+2;
+                int bulidBloL = 32;//AIGame.building[0].BlockL+2;
+                int bulidBloU = 32;//AIGame.building[0].BlockU+2;
                 createBuliding(i,BUILDING_HOME,bulidBloL,bulidBloU);
             }
+
+            if()
         }
 
 
