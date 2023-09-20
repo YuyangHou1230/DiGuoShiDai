@@ -49,6 +49,42 @@ struct mapInfo{
 
 
 //using namespace My_Struct;
+
+// 计算一个村民视野边界随机位置
+QPointF calHumanEdgePos(tagHuman man, mapInfo myMap[72][72])
+{
+    QList<QPoint> edgePos;
+    edgePos << QPoint(-2, 3) << QPoint(-1, 3) << QPoint(0, 3) << QPoint(1, 3) << QPoint(1, 3);
+    edgePos << QPoint(-3, -2) << QPoint(-3, -1) << QPoint(-3, 0) << QPoint(-3, 1) << QPoint(-3, 2);
+    edgePos << QPoint(-2, -3) << QPoint(-1, -3) << QPoint(0, -3) << QPoint(1, -3) << QPoint(1, -3);
+    edgePos << QPoint(3, -2) << QPoint(3, -1) << QPoint(3, 0) << QPoint(3, 1) << QPoint(3, 2);
+
+
+    // 选出有效的点
+    QList<QPoint> validPos;
+    for(auto p : edgePos){
+        int newL = man.BlockL + p.x();
+        int newU = man.BlockL + p.y();
+        if(newL < 2 || newL > 69 || newU < 2 || newU > 69){
+            continue;
+        }
+        if(!myMap[newL][newU].IsEmpty){
+            continue;
+        }
+
+
+        validPos << p;
+    }
+
+    int index = QRandomGenerator::global()->bounded(0, validPos.size());
+    QPoint targetPos = validPos[index];
+    QPointF re = QPointF(man.L + targetPos.x() * BLOCKSIDELENGTH, man.U + targetPos.y() * BLOCKSIDELENGTH);
+    if(re.rx() < 0 || re.ry() < 0){
+         qDebug() << re;
+    }
+
+    return re;
+}
 //下一步
 QPointF calNextStep(int Sn, mapInfo myMap[72][72],  bool zhuang, int celue=1 ) // 策略0 转向  策略1 随机
 {
@@ -421,23 +457,60 @@ void AI::processData()
         ProcessDataWork = 0;
         return ;
     }
-
-
+    // 人物失效判断
+    QList<int> wuxiaoSN;
     QMap<int, FoundRoad>::iterator it;
     for(it = xunluMap.begin(); it != xunluMap.end(); ++it){
+        if(it.value().man->Blood == 0){
+            wuxiaoSN << it.key();
+        }
+    }
+    for(auto p : wuxiaoSN){
+        xunluMap.remove(p);
+    }
+    if(xunluMap.size() < 2){
+        for(int i=0; i<2 - xunluMap.size(); i++){
+            for(auto p : m_humansList){
+                if(!xunluMap.contains(p->SN)){
+                    humanGoTo = QPointF(-3*BLOCKSIDELENGTH,0*BLOCKSIDELENGTH) + QPointF(p->L, p->U);
+                    HumanMove(p->SN,humanGoTo.rx(),humanGoTo.ry());
+                    FoundRoad f{p->SN, 0, p, humanGoTo};
+                    xunluMap.insert(p->SN, f);
+                    findRoadHumanNum++;
+                    break;
+                }
+            }
+        }
+    }
+
+    // 人物失效判断
+//    QMap<int, FoundRoad>::iterator it;
+    for(it = xunluMap.begin(); it != xunluMap.end(); ++it){
+        if(it.value().man->Blood == 0){
+            continue;
+        }
         FoundRoad& p = it.value();
 
         int blockHumanX = p.man->BlockL;
         int blockHumanY = p.man->BlockU;
         if(p.man->NowState== HUMAN_STATE_STOP){// 遇到障碍物
-            //取视野地图5x5
-            myMap[blockHumanX][blockHumanY].IsArrived = true;
-            p.targetPos = calNextStep(p.man->SN, myMap, true);
 
-            qDebug()  << "碰撞" << humanGoTo;
+            myMap[blockHumanX][blockHumanY].IsArrived = true;
+
+            int index = -1;
+            int bushSN = findResSN(*p.man, RESOURCE_TREE,index);
+            if(bushSN != 0){
+                HumanAction(p.man->SN, bushSN);
+                xunluMap.remove(p.man->SN);
+            }
+//            //取视野地图5x5
+
+//            p.targetPos = calHumanEdgePos(*p.man, myMap);
+
+//            qDebug()  << "碰撞" << humanGoTo;
 
             //记录即将要去的坐标
-            HumanMove(p.man->SN,humanGoTo.x(),humanGoTo.y());
+//            HumanMove(p.man->SN,humanGoTo.x(),humanGoTo.y());
         }
         else if(p.man->NowState >=1 && p.man->NowState <= 10){
             //取视野地图5x5
@@ -462,7 +535,8 @@ void AI::processData()
                 //取视野地图5x5
                 myMap[blockHumanX][blockHumanY].IsArrived = true;
 
-                p.targetPos = calNextStep(p.man->SN,myMap,false);
+//                p.targetPos = calNextStep(p.man->SN,myMap,false);
+                p.targetPos = calHumanEdgePos(*p.man, myMap);
 
                 //记录即将要去的坐标
                 HumanMove(p.man->SN,p.targetPos.x(),p.targetPos.y());
@@ -470,6 +544,15 @@ void AI::processData()
         }
     }
 
+    // 生产农民
+    if(AIGame.human_n < AIGame.Human_MaxNum){
+        if(AIGame.building[0].Project == BUILDING_FREE){
+            BuildingAction(AIGame.building[0].SN, BUILDING_CENTER_CREATEFARMER);
+        }
+    }
+
+    ProcessDataWork = 0;
+    return;
 
     //人物策略
     for (auto i :m_humansList) {
@@ -549,12 +632,7 @@ void AI::processData()
             Human3Action = 1;
         }
     }
-    // 生产农民
-    if(AIGame.human_n < AIGame.Human_MaxNum){
-        if(AIGame.building[0].Project == BUILDING_FREE){
-            BuildingAction(AIGame.building[0].SN, BUILDING_CENTER_CREATEFARMER);
-        }
-    }
+
 
     // 生产之后首先应该建造谷仓和房屋和仓库
     static bool hasGuCang = false;

@@ -857,7 +857,7 @@ void GameWidget::emptymemorymap()
 //地图移动
 void GameWidget::movemap()
 {
-    return;
+//    return;
     //此处采用相对坐标，只相对于当前窗口 所以在纵向数据判断处 应该加上的是下窗口的大小
     int x=this->mapFromGlobal(QCursor().pos()).x();
     int y=this->mapFromGlobal(QCursor().pos()).y();
