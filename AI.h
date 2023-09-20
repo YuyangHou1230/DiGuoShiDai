@@ -6,6 +6,37 @@
 #include <QTextBrowser>
 #include <GlobalVariate.h>
 
+struct mapInfo{
+    bool IsEmpty = true;
+    bool IsArrived = false;
+    int Type;
+    int SN;
+    //human
+    int NowState;
+    //buliding
+    int Foundation;
+    int Project;//当前建筑忙碌于
+    mapInfo(){
+
+    }
+    mapInfo(tagResource resource){
+        Type = resource.Type;
+        SN = resource.SN;
+    }
+
+    mapInfo(tagHuman resource){
+        NowState = resource.NowState;
+        SN = resource.SN;
+    }
+
+    mapInfo(tagBuilding resource){
+        Type = resource.Type;
+        Foundation = resource.Foundation;
+        Project = resource.Project;
+        SN = resource.SN;
+    }
+};
+
 class AI : public QObject
 {
     Q_OBJECT
@@ -179,6 +210,11 @@ public:
         return pow(pow(TL0 - L0, 2) + pow(TU0 - U0, 2), 0.5);
     }
 private:
+
+    // 计算寻路下一步
+    QPointF calNextStep(tagHuman human,  mapInfo myMap[72][72], bool zhuang=false);
+    // 查找距离某个村民最近的资源
+    int findResSN(tagHuman human, int resouce, int &index);
 
 public slots:
     virtual void processData();
