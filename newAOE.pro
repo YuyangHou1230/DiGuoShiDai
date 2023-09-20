@@ -26,7 +26,6 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 
 SOURCES += \
-    AI_My.cpp \
         main.cpp \
         MainWidget.cpp \
     GameWidget.cpp \
@@ -51,7 +50,6 @@ SOURCES += \
     Option.cpp
 
 HEADERS += \
-    AI_My.h \
         MainWidget.h \
     GameWidget.h \
     Coordinate.h \
