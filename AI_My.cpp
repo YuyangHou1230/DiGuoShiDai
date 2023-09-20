@@ -42,61 +42,106 @@ void AI_MY::processData()
 //    GameFirstStep()
 //    mapInfo humanPathMap[5][5];
 
-    static tagHuman firstHuman = AIGame.human[0];
+    tagHuman firstHuman = AIGame.human[0];
     double firHumanX = firstHuman.L;
     double firHumanY = firstHuman.U;
     int blockHumanX = AIGame.human[0].BlockL;
     int blockHumanY = AIGame.human[0].BlockU;
     static QPointF humanGoTo;
-//    HumanMove(firstHuman.SN,-15*BLOCKSIDELENGTH,0*BLOCKSIDELENGTH);
-//    return;
+
     if(AIGame.GameFrame == 0){
         humanGoTo = QPointF(-3*BLOCKSIDELENGTH,0*BLOCKSIDELENGTH) + QPointF(AIGame.human[0].L, AIGame.human[0].U);
+//        qDebug()<<"humanGoTo ...111111"<<humanGoTo.x();
+//        qDebug()<<"humanGoTo ...111111"<<humanGoTo.y();
         HumanMove(firstHuman.SN,humanGoTo.rx(),humanGoTo.ry());
         ProcessDataWork = 0;
         return ;
     }
 
+    const int step = 2;
     if(AIGame.human[0].NowState == HUMAN_STATE_STOP){ // 遇到障碍物
         //取视野地图5x5
-        for (int hi=-2;hi < 3;hi+=4) {
-            for (int hj=-2;hj < 3;hj+=4) {
-                bool empty = myMap[blockHumanX+hi][blockHumanY+hj].IsEmpty;
-                bool arrived = myMap[blockHumanX+hi][blockHumanY+hj].IsArrived;
+        myMap[blockHumanX][blockHumanY].IsArrived = true;
+        QList<QPoint> points;
+        for (int hi=-step;hi < step + 1;hi+=(step*2)) {
+            for (int hj=-step;hj < step +1 ;hj+=(step*2)) {
+
+                int targetL = blockHumanX+hi;
+                int targetU = blockHumanY+hj;
+//                qDebug()<<"targetL ..."<<targetL;
+//                qDebug()<<"targetU ..."<<targetU;
+                if(targetL <= 0 || targetL >= 72 || targetU <= 0|| targetU >= 72){
+                    continue;
+                }
+                bool empty = myMap[targetL][targetU].IsEmpty;
+                bool arrived = myMap[targetL][targetU].IsArrived;
                 if(!empty||arrived){
                     //判断即将前进的格子是否为空，并且是否去过
                     continue;
                 }
-                //记录即将要去的坐标
-                humanGoTo.setX(firHumanX+hi*BLOCKSIDELENGTH);
-                humanGoTo.setY(firHumanY+hj*BLOCKSIDELENGTH);
-                HumanMove(firstHuman.SN,humanGoTo.x(),humanGoTo.y());
+                points.push_back(QPoint(targetL, targetU));
+
             }
         }
+        if(!points.isEmpty()){
+            int index = QRandomGenerator::global()->bounded(0,points.size());
+            qDebug() << index;
+            QPoint point = points[index];
+            //记录即将要去的坐标
+            humanGoTo.setX(firHumanX+point.x()*BLOCKSIDELENGTH);
+            humanGoTo.setY(firHumanY+point.y()*BLOCKSIDELENGTH);
+            HumanMove(firstHuman.SN,humanGoTo.x(),humanGoTo.y());
+        }
+        else{
+
+        }
     }else {
-            // 判断是否到达目标点
-            double fL = fabs(firstHuman.L - humanGoTo.x());
-            double fU = fabs(firstHuman.U - humanGoTo.y());
-            if((fL < 1.1  && fU < 1.1)){ //到达目标点则发送新的移动指令
-                //取视野地图5x5
-                for (int hi=-2;hi < 3;hi+=4) {
-                    for (int hj=-2;hj < 3;hj+=4) {
-                        bool empty = myMap[blockHumanX+hi][blockHumanY+hj].IsEmpty;
-                        bool arrived = myMap[blockHumanX+hi][blockHumanY+hj].IsArrived;
-                        if(!empty||arrived){
-                            //判断即将前进的格子是否为空，并且是否去过
-                            continue;
-                        }
-                        //记录即将要去的坐标
-                        humanGoTo.setX(firHumanX+hi*BLOCKSIDELENGTH);
-                        humanGoTo.setY(firHumanY+hj*BLOCKSIDELENGTH);
-                        HumanMove(firstHuman.SN,humanGoTo.x(),humanGoTo.y());
+        // 判断是否到达目标点
+
+        double fL = fabs(firstHuman.L - humanGoTo.x());
+        double fU = fabs(firstHuman.U - humanGoTo.y());
+        //            qDebug()<<"fL ..."<<fL;
+        //            qDebug()<<"fU ..."<<fU;
+        if((fL < 1.1  && fU < 1.1)){ //到达目标点则发送新的移动指令
+            //取视野地图5x5
+            myMap[blockHumanX][blockHumanY].IsArrived = true;
+            QList<QPoint> points;
+            for (int hi=-step;hi < step + 1;hi+=(step*2)) {
+                for (int hj=-step;hj < step +1 ;hj+=(step*2)) {
+
+                    int targetL = blockHumanX+hi;
+                    int targetU = blockHumanY+hj;
+//                    qDebug()<<"targetL ..."<<targetL;
+//                    qDebug()<<"targetU ..."<<targetU;
+                    if(targetL <= 0 || targetL >= 72 || targetU <= 0|| targetU >= 72){
+                        continue;
                     }
+                    bool empty = myMap[targetL][targetU].IsEmpty;
+                    bool arrived = myMap[targetL][targetU].IsArrived;
+                    if(!empty||arrived){
+                        //判断即将前进的格子是否为空，并且是否去过
+                        continue;
+                    }
+                    points.push_back(QPoint(targetL, targetU));
+
                 }
             }
+            if(!points.isEmpty()){
+                int index = QRandomGenerator::global()->bounded(0,points.size());
+                qDebug() << index;
+                QPoint point = points[index];
+                //记录即将要去的坐标
+                humanGoTo.setX(firHumanX+point.x()*BLOCKSIDELENGTH);
+                humanGoTo.setY(firHumanY+point.y()*BLOCKSIDELENGTH);
+                HumanMove(firstHuman.SN,humanGoTo.x(),humanGoTo.y());
+            }
+            else{
+
+            }
+        }
     }
 
-
+    moveEnd:
     ProcessDataWork = 0;
     return;
 
