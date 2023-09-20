@@ -463,8 +463,22 @@ void AI::processData()
     QList<int> wuxiaoSN;
     QMap<int, FoundRoad>::iterator it;
     for(it = xunluMap.begin(); it != xunluMap.end(); ++it){
-        if(it.value().man->Blood == 0){
+        auto p = it.value();
+        if(it.value().man->Blood == 0 || p.man->NowState== HUMAN_STATE_STOP){
             wuxiaoSN << it.key();
+        }
+        int blockHumanX = p.man->BlockL;
+        int blockHumanY = p.man->BlockU;
+        if(p.man->NowState== HUMAN_STATE_STOP){// 遇到障碍物
+
+            myMap[blockHumanX][blockHumanY].IsArrived = true;
+
+            int index = -1;
+            int bushSN = findResSN(*p.man, RESOURCE_TREE,index);
+            if(bushSN != 0){
+                HumanAction(p.man->SN, bushSN);
+                xunluMap.remove(p.man->SN);
+            }
         }
     }
     for(auto p : wuxiaoSN){
@@ -497,14 +511,14 @@ void AI::processData()
         int blockHumanY = p.man->BlockU;
         if(p.man->NowState== HUMAN_STATE_STOP){// 遇到障碍物
 
-            myMap[blockHumanX][blockHumanY].IsArrived = true;
+//            myMap[blockHumanX][blockHumanY].IsArrived = true;
 
-            int index = -1;
-            int bushSN = findResSN(*p.man, RESOURCE_TREE,index);
-            if(bushSN != 0){
-                HumanAction(p.man->SN, bushSN);
-                xunluMap.remove(p.man->SN);
-            }
+//            int index = -1;
+//            int bushSN = findResSN(*p.man, RESOURCE_TREE,index);
+//            if(bushSN != 0){
+//                HumanAction(p.man->SN, bushSN);
+//                xunluMap.remove(p.man->SN);
+//            }
 //            //取视野地图5x5
 
 //            p.targetPos = calHumanEdgePos(*p.man, myMap);
