@@ -1,6 +1,5 @@
 ﻿#include "MainWidget.h"
 #include "ui_MainWidget.h"
-#include "AI_My.h"
 #include <QThread>
 #include <Windows.h>
 #include <iostream>

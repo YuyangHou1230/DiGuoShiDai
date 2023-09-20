@@ -40,7 +40,7 @@ struct mapInfo{
 
 //using namespace My_Struct;
 //下一步
-QPointF calNextStep(tagHuman human, mapInfo myMap[72][72], bool zhuang)
+QPointF calNextStep(tagHuman human, mapInfo myMap[72][72],  bool zhuang, int celue=0 ) // 策略0 转向  策略1 随机
 {
     // 上下左右四个方向可走
     QPoint origin = QPoint(human.BlockL, human.BlockU);
@@ -70,32 +70,37 @@ QPointF calNextStep(tagHuman human, mapInfo myMap[72][72], bool zhuang)
         }
         validIndex << i;
     }
-    if(zhuang){
-        int i = 1;
-        int inds = (lastIndex +i) %4;
-        while(!validIndex.contains(inds)){
-            i++;
-            inds = (lastIndex +i) %4;
+
+    if(celue == 0){
+
+        if(zhuang){
+            int i = 1;
+            int inds = (lastIndex +i) %4;
+            while(!validIndex.contains(inds)){
+                i++;
+                inds = (lastIndex +i) %4;
+            }
+            lastIndex = inds;
+
         }
-        lastIndex = inds;
+        else if(!validIndex.contains(lastIndex)){
+            lastIndex = (lastIndex + 1) %4;
+        }
+
+        QPoint targetPos = kk[lastIndex];
+
+
+        qDebug()   << "target" << targetPos;
+
+        QPointF re = QPointF(human.L + targetPos.x() * BLOCKSIDELENGTH, human.U + targetPos.y() * BLOCKSIDELENGTH);
+        if(re.rx() < 0 || re.ry() < 0){
+             qDebug() << re;
+        }
+
+
+        return re;
 
     }
-    else if(!validIndex.contains(lastIndex)){
-        lastIndex = (lastIndex + 1) %4;
-    }
-
-    QPoint targetPos = kk[lastIndex];
-
-
-    qDebug()   << "target" << targetPos;
-
-    QPointF re = QPointF(human.L + targetPos.x() * BLOCKSIDELENGTH, human.U + targetPos.y() * BLOCKSIDELENGTH);
-    if(re.rx() < 0 || re.ry() < 0){
-         qDebug() << re;
-    }
-
-
-    return re;
 
 
 
@@ -104,25 +109,25 @@ QPointF calNextStep(tagHuman human, mapInfo myMap[72][72], bool zhuang)
 
 
     int range = 1;
-//    while(notArriveIndex.isEmpty()){
-//        realPosIndex.clear();
-//        for(auto i : validIndex){
-//            QPoint p  = kk[i];
-//            int l = human.BlockL + p.x()*range;
-//            int u = human.BlockU +p.y()*range;
-//            if(l<1 || l >=72 || u < 1 || u>=72){
-//                continue;
-//            }
-//            if(myMap[l][u].IsEmpty && !myMap[l][u].IsArrived){
-//                notArriveIndex << i;
-//            }
+    while(notArriveIndex.isEmpty() || range < 5){
+        realPosIndex.clear();
+        for(auto i : validIndex){
+            QPoint p  = kk[i];
+            int l = human.BlockL + p.x()*range;
+            int u = human.BlockU +p.y()*range;
+            if(l<1 || l >=72 || u < 1 || u>=72){
+                continue;
+            }
+            if(myMap[l][u].IsEmpty && !myMap[l][u].IsArrived){
+                notArriveIndex << i;
+            }
 
-//            if(myMap[l][u].IsEmpty || (myMap[l][u].SN == human.SN)){
-//                realPosIndex << i;
-//            }
-//        }
-//        range++;
-//    }
+            if(myMap[l][u].IsEmpty || (myMap[l][u].SN == human.SN)){
+                realPosIndex << i;
+            }
+        }
+        range++;
+    }
 
     for(auto i : validIndex){
         QPoint p  = kk[i];
