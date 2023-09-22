@@ -398,6 +398,7 @@ void AI::processData()
     ///构建地图
     mapInfo myMap[72][72];
     static QMap<int, int> feixuList;
+    static QMap<int, int> jiantaMap;
 //    QList<tagBuilding*> feixuList ;
     QList<tagHuman*> m_humansList;
     static int findRoadHumanNum = 0;
@@ -522,47 +523,50 @@ void AI::processData()
     //取建筑
     for (int b=0; b < AIGame.building_n; b++) {
 
-        buildingList << &AIGame.building[b];
-        mapInfo bulidInfo = AIGame.building[b];
+
+        tagBuilding& building = AIGame.building[b];
+        buildingList << &building;
+        mapInfo bulidInfo = building;
         int  foundTmp = bulidInfo.Foundation;
-        if(AIGame.building[b].Type == BUILDING_ARROWTOWERPOSITION ){ //标记废墟
-            if(!feixuList.contains(AIGame.building[b].BlockL)){
-                feixuList[AIGame.building[b].BlockL] =AIGame.building[b].BlockU;
+        if(building.Type == BUILDING_ARROWTOWERPOSITION ){ //标记废墟
+            if(!feixuList.contains(building.BlockL) && !jiantaMap.contains(building.BlockL)){
+                feixuList[building.BlockL] =building.BlockU;
             }
-//            feixuList.append(&AIGame.building[b]);
+//            feixuList.append(&building);
         }
 
-        if(AIGame.building[b].Type == BUILDING_HOME){
-            m_zhuzhaiList.append(&AIGame.building[b]);
+        if(building.Type == BUILDING_HOME){
+            m_zhuzhaiList.append(&building);
 //            qDebug()<<"append ..m_zhuzhaiList1111   "<<homeNumber;
 //            qDebug()<<"append ..m_zhuzhaiList2222   "<<m_zhuzhaiList.size();
 //            qDebug()<<"     AIGame.building_n3333   "<<AIGame.building_n;
-        }else if (AIGame.building[b].Type == BUILDING_GRANARY) {
-            gucangSN = AIGame.building[b].SN;
-            gucangBuilding = &AIGame.building[b];
-        }else if (AIGame.building[b].Type == BUILDING_MARKET ) {
-            shichangSN = AIGame.building[b].SN;
-            if(AIGame.building[b].Percent == 100){
+        }else if (building.Type == BUILDING_GRANARY) {
+            gucangSN = building.SN;
+            gucangBuilding = &building;
+        }else if (building.Type == BUILDING_MARKET ) {
+            shichangSN = building.SN;
+            if(building.Percent == 100){
                 isFinishedMarket = true;
             }
-        }else if (AIGame.building[b].Type == BUILDING_STOCK ) {
-            cangkuSN = AIGame.building[b].SN;
+        }else if (building.Type == BUILDING_STOCK ) {
+            cangkuSN = building.SN;
 
-        }else if (AIGame.building[b].Type == BUILDING_FARM) {
-            farmList.append(&AIGame.building[b]);
+        }else if (building.Type == BUILDING_FARM) {
+            farmList.append(&building);
         }
-        else if(AIGame.building[b].Type ==BUILDING_ARROWTOWER ){
-            if(feixuList.contains(AIGame.building[b].BlockL) && AIGame.building[b].Percent == 100){
-                feixuList.remove(AIGame.building[b].BlockL);
+        else if(building.Type ==BUILDING_ARROWTOWER ){
+            if(feixuList.contains(building.BlockL) && building.Percent == 100){
+                feixuList.remove(building.BlockL);
             }
-            jiantaList.append(&AIGame.building[b]);
+            jiantaList.append(&building);
+            jiantaMap[building.BlockL] = building.BlockU;
         }
 
         //所占格都是Foundation+2
         for (int bi=0;bi < foundTmp+2;bi++) {
             for (int bj=0;bj < foundTmp+2;bj++) {
-                myMap[AIGame.building[b].BlockL+bi][AIGame.building[b].BlockU+bj] = AIGame.building[b];
-                myMap[AIGame.building[b].BlockL+bi][AIGame.building[b].BlockU+bj].IsEmpty = false;
+                myMap[building.BlockL+bi][building.BlockU+bj] = building;
+                myMap[building.BlockL+bi][building.BlockU+bj].IsEmpty = false;
 
             }
         }
@@ -611,6 +615,8 @@ void AI::processData()
 
             myMap[blockHumanX][blockHumanY].IsArrived = true;
 
+
+            // 优化 ：找到离中心最近的树
             int index = -1;
             int bushSN = findResSN(*p.man, RESOURCE_TREE,index);
             if(bushSN != 0){
@@ -622,7 +628,7 @@ void AI::processData()
     int maxNum;
     if(AIGame.GameFrame  <= (24*60*5)){
         maxNum = 3;
-    }else if(AIGame.GameFrame  <= (24*60*5) && AIGame.GameFrame  <= (24*60*7)){
+    }else if( AIGame.GameFrame  <= (24*60*10) || AIGame.civilizationStage == CIVILIZATION_STONEAGE){
         maxNum = 2;
     }else {
         maxNum = 1;
@@ -631,9 +637,14 @@ void AI::processData()
     if(feixuList.size() == 3){
         //废墟找到完了一个人探路
         xunluMap.clear();
-        int maxNum = 1;
+        maxNum = 1;
 
     }
+    if(xunluMap.size() > maxNum){
+        xunluMap.remove(xunluMap.firstKey());
+    }
+
+
     if(AIGame.GameFrame %(24*60*2) == 0){
         xunluMap.clear();
         findRoadHumanNum = 0;
