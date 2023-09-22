@@ -532,9 +532,9 @@ void AI::processData()
 
         if(AIGame.building[b].Type == BUILDING_HOME){
             m_zhuzhaiList.append(&AIGame.building[b]);
-//            qDebug()<<"append ..m_zhuzhaiList1111   "<<homeNumber;
-//            qDebug()<<"append ..m_zhuzhaiList2222   "<<m_zhuzhaiList.size();
-//            qDebug()<<"     AIGame.building_n3333   "<<AIGame.building_n;
+            qDebug()<<"append ..m_zhuzhaiList1111   "<<homeNumber;
+            qDebug()<<"append ..m_zhuzhaiList2222   "<<m_zhuzhaiList.size();
+            qDebug()<<"     AIGame.building_n3333   "<<AIGame.building_n;
         }else if (AIGame.building[b].Type == BUILDING_GRANARY) {
             gucangSN = AIGame.building[b].SN;
         }else if (AIGame.building[b].Type == BUILDING_MARKET ) {
@@ -742,13 +742,11 @@ void AI::processData()
             AIGame.building[0].Project == BUILDING_FREE && AIGame.Meat >= BUILDING_CENTER_UPGRADE_FOOD){
         BuildingAction(AIGame.building[0].SN, BUILDING_CENTER_UPGRADE);
     }
-
-    if(!hasGucang && hasResource(RESOURCE_BUSH) && AIGame.human[AIGame.human_n - 1].NowState != HUMAN_STATE_BUILDING && AIGame.human_n > 4){ // 并且已经找到果子, 在果子旁边
-        // 计算果子的位置
-        int index = ((times %2) == 0) ? 1 : -1;
-        int buildingX = m_bushList[0]->BlockL + index * ( 2 * (times /2 +1));
-        int buildingY = m_bushList[0]->BlockU + index * ( 2 * (times /2 +1));
-
+    //生产谷仓
+    if(!hasGucang && AIGame.human_n > 4 && AIGame.human[4].NowState != HUMAN_STATE_BUILDING){
+        int index = ((Cangkutimes %2) == 0) ? 1 : -1;
+        int buildingX = 37 +  -1 *Cangkutimes ;
+        int buildingY = 37 ;
         HumanBuild(AIGame.human[AIGame.human_n - 1].SN, BUILDING_GRANARY, buildingX, buildingY);
         isBuildingGucang = true;
         times += 1;
@@ -757,8 +755,23 @@ void AI::processData()
         }
 
         emptyMans.removeOne(&AIGame.human[AIGame.human_n - 1]);
-
     }
+//    if(!hasGucang && hasResource(RESOURCE_BUSH) && AIGame.human[AIGame.human_n - 1].NowState != HUMAN_STATE_BUILDING && AIGame.human_n > 4){ // 并且已经找到果子, 在果子旁边
+//        // 计算果子的位置
+//        int index = ((times %2) == 0) ? 1 : -1;
+//        int buildingX = m_bushList[0]->BlockL + index * ( 2 * (times /2 +1));
+//        int buildingY = m_bushList[0]->BlockU + index * ( 2 * (times /2 +1));
+
+//        HumanBuild(AIGame.human[AIGame.human_n - 1].SN, BUILDING_GRANARY, buildingX, buildingY);
+//        isBuildingGucang = true;
+//        times += 1;
+//        if(times > 10){
+//            times = 0;
+//        }
+
+//        emptyMans.removeOne(&AIGame.human[AIGame.human_n - 1]);
+
+//    }
 
     // 生产农民
 
@@ -784,22 +797,23 @@ void AI::processData()
     //        if(isBuildingHome && m_zhuzhaiList.last()->Percent == 100){
     //            isBuildingHome = false;
     //        }
-    qDebug()<<"bulid ..m_zhuzhaiList   "<<homeNumber;
+
     int homeMaxNum = 3;
     if(AIGame.civilizationStage == CIVILIZATION_STONEAGE){
         homeMaxNum = 1;
     }
     //检查是否有建筑未建成，如有继续建
     //每5帧检测一次
-    if(m_zhuzhaiList.size() >= homeNumber){
+
+    if(m_zhuzhaiList.size() > homeNumber){
         for(auto i:m_zhuzhaiList){
             if(i->Percent < 100 && AIGame.human[2].NowState != HUMAN_STATE_BUILDING && AIGame.GameFrame % 5 == 0){
                 HumanAction(AIGame.human[2].SN,i->SN);
             }
         }
     }
-
-    if( !isBuildingHome && homeNumber < homeMaxNum  && AIGame.human[2].NowState != HUMAN_STATE_BUILDING && m_zhuzhaiList.size() < maxNum){
+    qDebug()<<"bulid ..m_zhuzhaiList   "<<homeNumber;
+    if( !isBuildingHome && homeNumber < homeMaxNum  && AIGame.human[2].NowState != HUMAN_STATE_BUILDING && m_zhuzhaiList.size() < homeMaxNum){
 
         bool notFind = true;
         int x, y;
@@ -943,7 +957,9 @@ void AI::processData()
                         createBuliding(p,BUILDING_MARKET,BUILD_MARKET_WOOD,0,0);
                     }
 
-
+                    for(auto feixu:feixuList){
+                        HumanBuild(p->SN,BUILDING_ARROWTOWER,feixu->BlockL,feixu->BlockU);
+                    }
 
 
                     //找食物
