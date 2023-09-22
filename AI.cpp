@@ -745,7 +745,7 @@ void AI::processData()
     //生产谷仓
     if(!hasGucang && AIGame.human_n > 4 && AIGame.human[4].NowState != HUMAN_STATE_BUILDING){
         int index = ((Cangkutimes %2) == 0) ? 1 : -1;
-        int buildingX = 37 +  -1 *Cangkutimes ;
+        int buildingX = 38 +  -1 *times ;
         int buildingY = 37 ;
         HumanBuild(AIGame.human[AIGame.human_n - 1].SN, BUILDING_GRANARY, buildingX, buildingY);
         isBuildingGucang = true;
@@ -851,7 +851,7 @@ void AI::processData()
     if(!hasCangku && AIGame.human_n > 4 && AIGame.human[4].NowState != HUMAN_STATE_BUILDING){
         int index = ((Cangkutimes %2) == 0) ? 1 : -1;
         int buildingX = 33 +  -1 *Cangkutimes ;
-        int buildingY = 35 ;
+        int buildingY = 34 ;
 
         HumanBuild(AIGame.human[4].SN, BUILDING_STOCK, buildingX, buildingY);
         Cangkutimes += 1;
@@ -922,7 +922,7 @@ void AI::processData()
                         }else if(AIGame.Wood < 320){
                             int bushSN = findResSN(*p, RESOURCE_TREE,index);
                             HumanAction(p->SN, bushSN);
-                        }else if(AIGame.Meat < 250){
+                        }else if(AIGame.Meat < 500){
                             //食物不够，就去打猎
                             //将地图上的已杀死食物取回
                             for(auto ani:m_animalList){
@@ -963,6 +963,7 @@ void AI::processData()
 
 
                     //找食物
+                    //建农场
                     for(auto f: farmList){
                         if(f->Percent == 100){
                             HumanAction(p->SN,f->SN);
@@ -971,7 +972,7 @@ void AI::processData()
                         }
                     }
 
-                    if(guoList.size()< 4){
+                    if(guoList.size()< 5){
                         int index = -1;
                         int bushSN = findResSN(*p, RESOURCE_BUSH,index);
                         if(bushSN != 0){
