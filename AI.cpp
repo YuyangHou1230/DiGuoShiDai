@@ -110,12 +110,12 @@ QPointF calHumanEdgePos(tagHuman man, mapInfo myMap[72][72])
 
         }
 
-        int index = QRandomGenerator::global()->bounded(0, validPos.size());
+        int index = (QRandomGenerator::global()->bounded(0, realPos.size()) + AIGame.GameFrame) % realPos.size();
         targetPos = realPos[index];
 
     }
     else{
-        int index = QRandomGenerator::global()->bounded(0, validPos.size());
+        int index = (QRandomGenerator::global()->bounded(0, validPos.size())+ AIGame.GameFrame) % validPos.size();
         targetPos = validPos[index];
 
     }
@@ -920,11 +920,6 @@ void AI::processData()
 
 
     if(AIGame.civilizationStage == CIVILIZATION_TOOLAGE){ //工具时代
-        int buildSN = 4;
-        int SN = AIGame.human[buildSN].SN;
-        while(AIGame.human[buildSN].Blood < 1 && buildSN < AIGame.human_n){
-            buildSN ++;
-        }
 
         //谷仓升级箭塔技术
         static bool updateJianTa = false;
@@ -952,6 +947,13 @@ void AI::processData()
             feixuList.remove(buidlKey);
         }
 
+        int buildSN = 4 + jiantaList.size();
+        int SN = AIGame.human[buildSN].SN;
+        while(AIGame.human[buildSN].Blood < 1 && buildSN < AIGame.human_n){
+            buildSN ++;
+        }
+
+
         if(!building){
             if(!feixuList.isEmpty()){
                 if(jiantaTech){
@@ -959,7 +961,7 @@ void AI::processData()
                     int u =  feixuList.begin().value();
 
                     buidlKey = l;
-                    HumanBuild(AIGame.human[buildSN].SN,BUILDING_ARROWTOWER,l,u);
+                    int a = HumanBuild(AIGame.human[buildSN].SN,BUILDING_ARROWTOWER,l,u);
                     jiantaNum++;
                     building = true;
 
