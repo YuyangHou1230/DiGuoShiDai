@@ -552,6 +552,9 @@ void AI::processData()
             farmList.append(&AIGame.building[b]);
         }
         else if(AIGame.building[b].Type ==BUILDING_ARROWTOWER ){
+            if(feixuList.contains(AIGame.building[b].BlockL) && AIGame.building[b].Percent == 100){
+                feixuList.remove(AIGame.building[b].BlockL);
+            }
             jiantaList.append(&AIGame.building[b]);
         }
 
@@ -764,7 +767,8 @@ void AI::processData()
             QPolygon points;
             static int index = 0;
             // 尝试在这五个点建造
-            points << QPoint(-3, -3) << QPoint(-3, -2) << QPoint(-3, -1) << QPoint(-3, 0) << QPoint(-3, 1) << QPoint(-3, 2);
+            points << QPoint(-4, -3) << QPoint(-4, -2) << QPoint(-4, -1) << QPoint(-4, 0)
+                   << QPoint(-4, 1) << QPoint(-4, 2) << QPoint(-4, 3) << QPoint(-4, 4);
 
 
             int buildingX = m_bushList.first()->BlockL +  points[index].x();
@@ -913,6 +917,10 @@ void AI::processData()
 
         //谷仓升级箭塔技术
         static bool updateJianTa = false;
+        if(updateJianTa && gucangBuilding && gucangBuilding->Project == BUILDING_FREE){
+            jiantaTech = true;
+            updateJianTa = false;
+        }
         if(!updateJianTa && !jiantaTech && gucangBuilding && gucangBuilding->Project == BUILDING_FREE){
              BuildingAction(gucangSN,BUILDING_GRANARY_ARROWTOWER);
              updateJianTa = true;
@@ -920,13 +928,15 @@ void AI::processData()
 
         static int jiantaNum = 0;
         static bool building = 0;
-        int buidlKey = 0;
+        static int buidlKey = 0;
         if(jiantaList.size() < jiantaNum ){
             building = false;
             jiantaNum--;
-
+            buidlKey = 0;
         }
-        if(building && jiantaList.last()->Percent == 100){
+
+
+        if(building && jiantaList.size() > 0 && jiantaList.last()->Percent == 100){
             building = false;
             feixuList.remove(buidlKey);
         }
@@ -958,23 +968,30 @@ void AI::processData()
 
     }
 
+    // 收拾残局
+    if(emptyMans.size() > 0){
+        //检查是否有建筑未建成，如有继续建
+        for(auto bul:buildingList){
+            if((bul->SN == gucangSN &&bul->Percent != 100) || (bul->SN == cangkuSN &&bul->Percent != 100)){
+                HumanAction(emptyMans.first()->SN,bul->SN);
+                emptyMans.removeFirst();
+            }
+        }
+    }
+    if(emptyMans.size() > 0 && !hasResource(RESOURCE_BUSH)){
+        for(auto ani:m_animalList){
+            if(ani->Blood <= 5){
+                HumanAction(emptyMans.first()->SN,ani->SN);
+                emptyMans.removeFirst();
+                break;
+            }
+        }
+    }
 
 
     // 空闲分配
     if(emptyMans.size() > 0){
-        //检查是否有建筑未建成，如有继续建
         for(auto p : emptyMans){
-            for(auto bul:buildingList){
-                if((bul->SN == gucangSN &&bul->Percent != 100) || (bul->SN == cangkuSN &&bul->Percent != 100)){
-                    HumanAction(p->SN,bul->SN);
-
-                }
-            }
-            for(auto ani:m_animalList){
-                if(ani->Blood <= 5){
-                    HumanAction(p->SN,ani->SN);
-                }
-            }
             if(guoList.empty() && hasResource(RESOURCE_BUSH)){
                 int index = -1;
                 int bushSN = findResSN(*p, RESOURCE_BUSH,index);
