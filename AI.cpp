@@ -397,8 +397,8 @@ void AI::processData()
     ProcessDataWork = 1;
     ///构建地图
     mapInfo myMap[72][72];
-//    static QMap<int, int> feixuList;
-    QList<tagBuilding*> feixuList ;
+    static QMap<int, int> feixuList;
+//    QList<tagBuilding*> feixuList ;
     QList<tagHuman*> m_humansList;
     static int findRoadHumanNum = 0;
     int homeNumber =AIGame.Human_MaxNum/4-1;
@@ -422,6 +422,8 @@ void AI::processData()
     QList<tagBuilding*> m_zhuzhaiList;
     QList<tagBuilding*> buildingList;
     QList<tagBuilding*> farmList ;
+    tagBuilding* gucangBuilding = nullptr ;
+    QList<tagBuilding*> jiantaList ;
     //    static QList<tagBuilding*> m_gucangList;
     //    static QList<tagBuilding*> m_List;
 
@@ -524,10 +526,10 @@ void AI::processData()
         mapInfo bulidInfo = AIGame.building[b];
         int  foundTmp = bulidInfo.Foundation;
         if(AIGame.building[b].Type == BUILDING_ARROWTOWERPOSITION ){ //标记废墟
-//            if(!feixuList.contains(AIGame.building[b].BlockL)){
-//                feixuList[AIGame.building[b].BlockL] =AIGame.building[b].BlockU;
-//            }
-            feixuList.append(&AIGame.building[b]);
+            if(!feixuList.contains(AIGame.building[b].BlockL)){
+                feixuList[AIGame.building[b].BlockL] =AIGame.building[b].BlockU;
+            }
+//            feixuList.append(&AIGame.building[b]);
         }
 
         if(AIGame.building[b].Type == BUILDING_HOME){
@@ -537,6 +539,7 @@ void AI::processData()
 //            qDebug()<<"     AIGame.building_n3333   "<<AIGame.building_n;
         }else if (AIGame.building[b].Type == BUILDING_GRANARY) {
             gucangSN = AIGame.building[b].SN;
+            gucangBuilding = &AIGame.building[b];
         }else if (AIGame.building[b].Type == BUILDING_MARKET ) {
             shichangSN = AIGame.building[b].SN;
             if(AIGame.building[b].Percent == 100){
@@ -547,6 +550,9 @@ void AI::processData()
 
         }else if (AIGame.building[b].Type == BUILDING_FARM) {
             farmList.append(&AIGame.building[b]);
+        }
+        else if(AIGame.building[b].Type ==BUILDING_ARROWTOWER ){
+            jiantaList.append(&AIGame.building[b]);
         }
 
         //所占格都是Foundation+2
@@ -752,17 +758,40 @@ void AI::processData()
     }
     //生产谷仓
     if(!hasGucang && AIGame.human_n > 4 && AIGame.human[4].NowState != HUMAN_STATE_BUILDING){
-        int index = ((Cangkutimes %2) == 0) ? 1 : -1;
-        int buildingX = 38 +  -1 *times ;
-        int buildingY = 37 ;
-        HumanBuild(AIGame.human[AIGame.human_n - 1].SN, BUILDING_GRANARY, buildingX, buildingY);
-        isBuildingGucang = true;
-        times += 1;
-        if(times > 10){
-            times = 0;
+
+        if(!m_bushList.isEmpty()){
+
+            QPolygon points;
+            static int index = 0;
+            // 尝试在这五个点建造
+            points << QPoint(-3, -3) << QPoint(-3, -2) << QPoint(-3, -1) << QPoint(-3, 0) << QPoint(-3, 1) << QPoint(-3, 2);
+
+
+            int buildingX = m_bushList.first()->BlockL +  points[index].x();
+            int buildingY = m_bushList.first()->BlockU +  points[index].y(); ;
+            HumanBuild(AIGame.human[AIGame.human_n - 1].SN, BUILDING_GRANARY, buildingX, buildingY);
+            isBuildingGucang = true;
+            index++;
+            if(index > 4){
+                index = 0;
+            }
+
+            emptyMans.removeOne(&AIGame.human[AIGame.human_n - 1]);
+        }
+        else if(AIGame.GameFrame > 24*60*4){
+            int index = ((Cangkutimes %2) == 0) ? 1 : -1;
+            int buildingX = 38 +  -1 *times ;
+            int buildingY = 37 ;
+            HumanBuild(AIGame.human[AIGame.human_n - 1].SN, BUILDING_GRANARY, buildingX, buildingY);
+            isBuildingGucang = true;
+            times += 1;
+            if(times > 10){
+                times = 0;
+            }
+
+            emptyMans.removeOne(&AIGame.human[AIGame.human_n - 1]);
         }
 
-        emptyMans.removeOne(&AIGame.human[AIGame.human_n - 1]);
     }
 //    if(!hasGucang && hasResource(RESOURCE_BUSH) && AIGame.human[AIGame.human_n - 1].NowState != HUMAN_STATE_BUILDING && AIGame.human_n > 4){ // 并且已经找到果子, 在果子旁边
 //        // 计算果子的位置
@@ -875,6 +904,61 @@ void AI::processData()
 
 
 
+    if(AIGame.civilizationStage == CIVILIZATION_TOOLAGE){ //工具时代
+        int buildSN = 4;
+        int SN = AIGame.human[buildSN].SN;
+        while(AIGame.human[buildSN].Blood < 1 && buildSN < AIGame.human_n){
+            buildSN ++;
+        }
+
+        //谷仓升级箭塔技术
+        static bool updateJianTa = false;
+        if(!updateJianTa && !jiantaTech && gucangBuilding && gucangBuilding->Project == BUILDING_FREE){
+             BuildingAction(gucangSN,BUILDING_GRANARY_ARROWTOWER);
+             updateJianTa = true;
+        }
+
+        static int jiantaNum = 0;
+        static bool building = 0;
+        int buidlKey = 0;
+        if(jiantaList.size() < jiantaNum ){
+            building = false;
+            jiantaNum--;
+
+        }
+        if(building && jiantaList.last()->Percent == 100){
+            building = false;
+            feixuList.remove(buidlKey);
+        }
+
+        if(!building){
+            if(!feixuList.isEmpty()){
+                if(jiantaTech){
+                    int l = feixuList.begin().key();
+                    int u =  feixuList.begin().value();
+
+                    buidlKey = l;
+                    HumanBuild(AIGame.human[buildSN].SN,BUILDING_ARROWTOWER,l,u);
+                    jiantaNum++;
+                    building = true;
+
+                    emptyMans.removeOne(&AIGame.human[buildSN]);
+                }
+            }
+            else if(shichangSN == 0){ //第一步先造市场 提升资源采集效率
+                HumanBuild(buildSN,BUILDING_MARKET, 32,40);
+            }
+            else{
+                if(farmList.size() < 3 && isFinishedMarket){ // 市场完成后建造农田
+                    createBuliding(&AIGame.human[buildSN],BUILDING_FARM,BUILD_FARM_WOOD,0,0);
+                }
+            }
+        }
+
+
+    }
+
+
 
     // 空闲分配
     if(emptyMans.size() > 0){
@@ -896,6 +980,14 @@ void AI::processData()
                 int bushSN = findResSN(*p, RESOURCE_BUSH,index);
                 if(bushSN != 0){
                     HumanAction(p->SN, bushSN);
+                }
+                else{
+                    for(auto ani:m_animalList){
+                        if(ani->Blood <= 5 || ani->Type == RESOURCE_GAZELLE){
+                            HumanAction(p->SN,ani->SN);
+                            break;
+                        }
+                    }
                 }
             }
             else if(shuList.empty()){
@@ -950,23 +1042,6 @@ void AI::processData()
                 }
                 else{
                     //第二阶段
-                    //谷仓升级箭塔技术
-                    if(!jiantaTech ){
-                         BuildingAction(gucangSN,BUILDING_GRANARY_ARROWTOWER);
-                    }
-                    //第一步先造市场 提升资源采集效率
-                    //市场完成后立即建造农田
-                    if(shichangSN != 0){
-                        if(farmList.size() < 3 && isFinishedMarket){
-                            createBuliding(p,BUILDING_FARM,BUILD_FARM_WOOD,0,0);
-                        }
-                    }else {
-                        createBuliding(p,BUILDING_MARKET,BUILD_MARKET_WOOD,0,0);
-                    }
-
-                    for(auto feixu:feixuList){
-                        HumanBuild(p->SN,BUILDING_ARROWTOWER,feixu->BlockL,feixu->BlockU);
-                    }
 
 
                     //找食物
